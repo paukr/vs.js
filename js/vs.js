@@ -1,44 +1,52 @@
-function VS(canvas) {
-	paper.setup(canvas);
-	var nodes = {};
-	
-	(function test() {
-		var rectangle = new paper.Rectangle(new paper.Point(50, 50), new paper.Point(150, 100));
-		var path = new paper.Path.Rectangle(rectangle);
-		path.fillColor = '#e9e9ff';
-		
-		nodes[1] = path;
-	}());
-	paper.view.draw();
-	
-	(function tool() {
-		var tool = new paper.Tool();
-		var nodeMouseOver = null;
-		var nodeMouseDown = null;
-		tool.onMouseDown = function(event) {
-			nodeMouseDown = event.item;
-		}
-		
-		tool.onMouseDrag = function(event) {
-			if (nodeMouseDown) {
-				nodeMouseDown.translate(event.delta);
-			}
-		}
-		
-		tool.onMouseUp = function(event) {
-			nodeMouseDown = null;
-		}
-		
-		tool.onMouseMove = function(event) {
-			if (nodeMouseOver) {
-				nodeMouseOver.strokeColor = 'white';
-				nodeMouseOver = null;
-			}
-			if (event.item) {
-				nodeMouseOver = event.item;
-				nodeMouseOver.strokeColor = 'black';
-			}
-		}
-	}());
-}
+"use strict";
 
+var VS = function(canvas) {
+	var myPaper = paper.setup(canvas);
+	this.getPaper = function() {
+		return myPaper;
+	}
+	
+	this.initSymbols = function() {
+		return {
+			'rect' : rect(),
+		}
+	};
+	var symbols = this.initSymbols();
+		
+	this.place = function(symbolKey, position) {
+		if (symbols.hasOwnProperty(symbolKey) === false) {
+			throw Error("key not found");
+		}
+		var item = symbols[symbolKey].place(position);
+		var group = new VS.Group(item);
+		group.resetBorder(true);
+	};
+	
+	var nodes = Object.create(null);
+	var lastKey = 0;
+	
+	var toolDefault = new VS.ToolDefault(this);
+};
+
+VS.Group = function(item) {
+	var color = 'black';
+	var border = new paper.Path.Rectangle(0, 0, 1, 1);
+	border.strokeColor = color;
+	var group = new paper.Group(item, border);
+	group.onMouseEnter = function(event) {
+		border.strokeColor = color;
+	};
+	group.onMouseLeave = function(event) {
+		border.strokeColor = undefined;
+	};
+		
+	group.resetBorder = function(mouseEntered) {
+		border.remove();
+		var rect = this.strokeBounds;
+		rect = rect.expand(border.strokeWidth * 2);
+		border = new paper.Path.Rectangle(rect);
+		this.addChild(border);
+		mouseEntered && this.onMouseEnter();
+	};
+	return group;
+}
